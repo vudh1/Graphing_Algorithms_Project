@@ -1,107 +1,71 @@
 #include "project3.h"
-#include "graph.h"
 
-int get_NaiveDiameter(Graph graph)
-{
-	int max_diameter = 0;
-	
-	map<int,Node> nodes = graph.get_id_to_node_map();
+#include <algorithm>
 
-	int size = nodes.size();
+int get_naive_diameter(Graph graph) {
+    int max_diameter = 0;
+    const auto nodes = graph.get_id_to_node_map();
+    const int size = static_cast<int>(nodes.size());
 
-	for (int i = 0; i < size - 1; i++)
-	{
-		for (int j = 1; j < size; j++)
-		{
-			int distance = graph.get_Distance(nodes[i], nodes[j]);
-			if (max_diameter < distance) max_diameter = distance;
-		}
-	}
+    for (int i = 0; i < size; ++i) {
+        for (int j = i + 1; j < size; ++j) {
+            const int distance = graph.get_distance(nodes.at(i), nodes.at(j));
+            if (distance > max_diameter) {
+                max_diameter = distance;
+            }
+        }
+    }
 
-	return max_diameter;
+    return max_diameter;
 }
 
-int get_diameter(Graph graph)
-{
-	int max_diameter = 0;
+int get_diameter(Graph graph) {
+    const auto nodes = graph.get_id_to_node_map();
+    const int size = static_cast<int>(nodes.size());
 
-	int temp = 0;
+    if (size <= 1) {
+        return 0;
+    }
+    if (size <= 100) {
+        return get_naive_diameter(graph);
+    }
 
-	map<int, Node> nodes = graph.get_id_to_node_map();
+    // Approximate large-graph diameter with several double-sweep BFS runs.
+    std::mt19937 generator(42);
+    std::uniform_int_distribution<int> distribution(0, size - 1);
+    int best = 0;
 
-	int size = nodes.size();
+    const int sweeps = std::min(8, size);
+    for (int i = 0; i < sweeps; ++i) {
+        Node start = nodes.at(distribution(generator));
+        auto first = graph.bfs_for_diameter(start);
+        if (first.first < 0) {
+            continue;
+        }
+        auto second = graph.bfs_for_diameter(first.second);
+        best = std::max(best, second.first);
+    }
 
-	vector<bool> visited(size,false);
-
-	if (size <= 1) return 0;
-
-	if(size > 100)
-	{
-		mt19937 mt = mt19937(chrono::system_clock::now().time_since_epoch().count());
-
-		uniform_int_distribution<int> ui = uniform_int_distribution<int>(0, size - 1);
-
-		Node randomNode(nodes[ui(mt)]);
-
-		while (1)
-		{
-			pair<int, Node> diameter = graph.BFS_for_Diameter(randomNode);
-
-			visited[randomNode.id] = true;
-
-			if (max_diameter < diameter.first && !visited[diameter.second.id])
-			{
-				max_diameter = diameter.first;
-				randomNode = diameter.second;
-			}
-			else break;
-		}
-
-		return max_diameter;
-	}
-
-	else return get_NaiveDiameter(graph);
+    return best;
 }
 
-float get_clustering_coefficient(Graph graph)
-{
-	float result;
+double get_clustering_coefficient(Graph graph) {
+    const long long two_paths = graph.get_num_two_paths();
+    if (two_paths == 0) {
+        return 0.0;
+    }
 
-	//get denominator
-	int twoPathedge_num = graph.getNum_2PEdge();
-
-	if (twoPathedge_num <= 0) return 0.0; //denominator is 0 so skipp dividing	
-
-	//get numerator
-	int triangleNum = graph.get_Triangles();
-
-	result = (float)triangleNum * 3 / twoPathedge_num;
-
-	return result;
+    const long long triangles = graph.get_triangles();
+    return 3.0 * static_cast<double>(triangles) / static_cast<double>(two_paths);
 }
 
-std::map<int, int> get_degree_distribution(Graph graph)
-{
-	map<int, int> histogram;
+std::map<int, int> get_degree_distribution(Graph graph) {
+    std::map<int, int> histogram;
 
-	for (int i = 0; i < graph.get_num_nodes(); i++)
-		histogram[i] = 0;
+    for (const auto& [node, degree] : graph.get_all_degrees()) {
+        (void)node;
+        ++histogram[degree];
+    }
 
-	map<Node, int> degrees = graph.get_All_Degrees();
-
-	for (auto &x : degrees)
-		histogram[x.second]++;
-
-
-	
-	//	for (auto &x : histogram)
-	//{
-	//	cout << x.first << "\t";
-	//	for (int i = 0; i < x.second; i++)
-	//		cout << "o";
-	//	cout << endl;
-	//}
-	
-
-	return histogram;
+    return histogram;
 }
