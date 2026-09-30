@@ -1,202 +1,114 @@
 #include "project3.h"
 
-#define MIN_ID 100
-#define MAX_ID 1000000
-#define FOLDER_DIRECTORY_ER "./data_All/"
-#define FOLDER_DIRECTORY_BA "./data_All/"
+#include <filesystem>
+#include <iomanip>
 
+namespace fs = std::filesystem;
 
-struct Data
-{
-	int num_nodes;
-	int num_edges;
-	int diameter;
-	float clustering_coefficients;
-	map<int, int> histogram;
+struct Data {
+    int num_nodes;
+    int num_edges;
+    int diameter;
+    double clustering_coefficient;
+    std::map<int, int> histogram;
 };
 
-Data collectData(Graph graph)
-{
-	Data data;
-
-	data.num_nodes = graph.get_num_nodes();
-	data.num_edges = graph.get_num_edges();
-
-	cout << "test " << data.num_nodes << " nodes & " << data.num_edges << " edges:\nget_degree_distribution: ";
-	
-	data.histogram = get_degree_distribution(graph);
-	cout << "completed\nget_diameter: ";
-
-	data.diameter = get_diameter(graph);
-	cout << "completed\nget_clustering_coefficient: ";
-
-	data.clustering_coefficients = get_clustering_coefficient(graph);
-	cout << "completed\n";
-
-
-	return data;
+Data collect_data(Graph graph) {
+    Data data{};
+    data.num_nodes = graph.get_num_nodes();
+    data.num_edges = graph.get_num_edges();
+    data.histogram = get_degree_distribution(graph);
+    data.diameter = get_diameter(graph);
+    data.clustering_coefficient = get_clustering_coefficient(graph);
+    return data;
 }
 
-void create_erdos_renyi_Files(const string folder, const string size)
-{
-	ofstream f;
-	f.open(folder + "er_info.csv", ios::trunc);
-	f << "Size,Edges\n";
-	f.close();
-
-	f.open(folder + "er_diameter.csv", ios::trunc);
-	f << "Size,Diameter\n";
-	f.close();
-
-	f.open(folder + "er_clustering.csv", ios::trunc);
-	f << "Size,Clustering Coefficient\n";
-	f.close();
-
-	f.open(folder + size + "_" + "er_degree.csv", ios::trunc);
-	f << "Degree,Frequency\n";
-	f.close();
+void write_degree_file(const fs::path& path, const std::map<int, int>& histogram) {
+    std::ofstream file(path);
+    file << "Degree,Frequency\n";
+    for (const auto& [degree, frequency] : histogram) {
+        file << degree << ',' << frequency << '\n';
+    }
 }
 
-void create_barabasi_albert_Files(const string folder, const string size)
-{
-	ofstream f;
-
-	f.open(folder + "ba_info.csv", ios::trunc);
-	f << "Size,Edges\n";
-	f.close();
-
-	f.open(folder + "ba_clustering.csv", ios::trunc);
-	f << "Size,Clustering Coefficient\n";
-	f.close();
-
-	f.open(folder + size +  "_" + "ba_degree.csv", ios::trunc);
-	f << "Degree,Frequency\n";
-	f.close();
+void append_summary(
+    const fs::path& info_path,
+    const fs::path& diameter_path,
+    const fs::path& clustering_path,
+    const Data& data
+) {
+    std::ofstream(info_path, std::ios::app) << data.num_nodes << ',' << data.num_edges << '\n';
+    std::ofstream(diameter_path, std::ios::app) << data.num_nodes << ',' << data.diameter << '\n';
+    std::ofstream(clustering_path, std::ios::app)
+        << data.num_nodes << ',' << std::setprecision(8) << data.clustering_coefficient << '\n';
 }
 
-void create_All_Files(int j)
-{
-	string size = to_string(j);
+void initialize_summary_files(const fs::path& output) {
+    std::ofstream(output / "er_info.csv") << "Size,Edges\n";
+    std::ofstream(output / "er_diameter.csv") << "Size,Diameter\n";
+    std::ofstream(output / "er_clustering.csv") << "Size,Clustering Coefficient\n";
 
-	create_erdos_renyi_Files(FOLDER_DIRECTORY_ER, size);
-
-	create_barabasi_albert_Files(FOLDER_DIRECTORY_BA, size);
+    std::ofstream(output / "ba_info.csv") << "Size,Edges\n";
+    std::ofstream(output / "ba_diameter.csv") << "Size,Diameter\n";
+    std::ofstream(output / "ba_clustering.csv") << "Size,Clustering Coefficient\n";
 }
 
-void add_data_to_erdos_renyi_Files(const string folder, const string size, const Data data)
-{
-	ofstream f;
-
-	f.open(folder + "er_info.csv", ios::app);
-	f << data.num_nodes << "," << data.num_edges << "\n";
-	f.close();
-
-	f.open(folder + "er_diameter.csv", ios::app);
-	f << data.num_nodes << "," << data.diameter << "\n";
-	f.close();
-
-	f.open(folder + "er_clustering.csv", ios::app);
-	f << data.num_nodes << "," << data.clustering_coefficients << "\n";
-	f.close();
-
-	f.open(folder + size + "_" + "er_degree.csv", ios::app);
-	for (auto &x : data.histogram)
-		f << x.first << "," << x.second << "\n";
-	f.close();
+std::vector<int> quick_sizes() {
+    return {100, 500, 1000};
 }
 
-void add_data_to_barabasi_albert_Files(const string folder, const string size, const Data data)
-{
-	ofstream f;
-
-	f.open(folder + "ba_info.csv", ios::app);
-	f << data.num_nodes << "," << data.num_edges << "\n";
-	f.close();
-
-	f.open(folder + "ba_diameter.csv", ios::app);
-	f << data.num_nodes << "," << data.diameter << "\n";
-	f.close();
-
-	f.open(folder + "ba_clustering.csv", ios::app);
-	f << data.num_nodes << "," << data.clustering_coefficients << "\n";
-	f.close();
-
-	f.open(folder + size + "_" + "ba_degree.csv", ios::app);
-	for (auto &x : data.histogram)
-		f << x.first << "," << x.second << "\n";
-
-	f.close();
+std::vector<int> full_sizes() {
+    return {100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000};
 }
 
-void run_erdos_renyi_test(int j)
-{
-	Graph graph;
+int main(int argc, char* argv[]) {
+    bool full = false;
+    fs::path output = "data_All";
 
-	string size = to_string(j);
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--full") {
+            full = true;
+        } else if (arg == "--output" && i + 1 < argc) {
+            output = argv[++i];
+        } else if (arg == "--help") {
+            std::cout << "Usage: " << argv[0] << " [--full] [--output DIRECTORY]\n";
+            return 0;
+        } else {
+            std::cerr << "Unknown argument: " << arg << '\n';
+            return 2;
+        }
+    }
 
-	cout << "\n\n--- Erdos_Renyi ---"<<" Size " << j;
+    fs::create_directories(output);
+    initialize_summary_files(output);
 
-	cout << "\n\ncreate_er_graph -> ";
+    const std::vector<int> sizes = full ? full_sizes() : quick_sizes();
 
-	graph = create_erdos_renyi_graph(j, (float)(2 * log(j) / j));
+    for (int n : sizes) {
+        std::cout << "Erdos-Renyi n=" << n << std::endl;
+        Graph er = create_erdos_renyi_graph(n, 2.0 * std::log(static_cast<double>(n)) / n);
+        Data er_data = collect_data(er);
+        append_summary(
+            output / "er_info.csv",
+            output / "er_diameter.csv",
+            output / "er_clustering.csv",
+            er_data
+        );
+        write_degree_file(output / (std::to_string(n) + "_er_degree.csv"), er_data.histogram);
 
-	cout << "add_to_er_files -> ";
+        std::cout << "Barabasi-Albert n=" << n << std::endl;
+        Graph ba = create_barabasi_albert_graph(n, 5);
+        Data ba_data = collect_data(ba);
+        append_summary(
+            output / "ba_info.csv",
+            output / "ba_diameter.csv",
+            output / "ba_clustering.csv",
+            ba_data
+        );
+        write_degree_file(output / (std::to_string(n) + "_ba_degree.csv"), ba_data.histogram);
+    }
 
-	Data data = collectData(graph);
-
-	add_data_to_erdos_renyi_Files(FOLDER_DIRECTORY_ER, size, data);
-
-}
-
-void run_barabasi_albert_test(int j)
-{
-	Graph graph;
-
-	string size, test;
-
-	size = to_string(j);
-
-	cout << "\n\n--- Barabasi_Albert ---" <<" Size " << j;
-
-	cout << "\n\ncreate_ba_graph -> ";
-
-	graph = create_barabasi_albert_graph(j, 5);
-
-	cout << "add_to_ba_files -> ";
-
-	Data data = collectData(graph);
-
-	add_data_to_barabasi_albert_Files(FOLDER_DIRECTORY_BA, size, data );
-}
-
-void run_and_print_to_Files()
-{
-	for (int j = MIN_ID; j <= MAX_ID; j *= 10)
-	{
-			create_All_Files(j);
-
-			if(j*5<=MAX_ID)
-			create_All_Files(j * 5);
-	}
-	
-	for (int j = MIN_ID; j <= MAX_ID; j *= 10)
-	{
-			run_erdos_renyi_test(j);
-
-			run_barabasi_albert_test(j);
-		
-			if (j * 5 <= MAX_ID)
-			{
-				run_erdos_renyi_test(j * 5);
-
-				run_barabasi_albert_test(j * 5);
-			}
-	}
-}
-
-int main()
-{
-	run_and_print_to_Files();
-	
-	return 0;
+    std::cout << "Results written to " << output << std::endl;
+    return 0;
 }
