@@ -1,65 +1,54 @@
-#include "node.h"
-#include <vector>
-#include <map>
-#include <set>
-#include <list>
-#include <algorithm>
-
-using namespace std;
-
 #ifndef GRAPH_H
 #define GRAPH_H
 
-class AbstractGraph
-{
-public:
-	virtual int get_num_nodes() = 0;
-	virtual int get_num_edges() = 0;
-	virtual bool is_neighbor(Node u, Node v) = 0;
-	
-	virtual std::vector<Node> get_neighbors(Node u) = 0;
+#include "node.h"
 
-	virtual std::map<int, Node> get_id_to_node_map() = 0;
+#include <list>
+#include <map>
+#include <set>
+#include <utility>
+#include <vector>
+
+class AbstractGraph {
+public:
+    virtual ~AbstractGraph() = default;
+    virtual int get_num_nodes() = 0;
+    virtual int get_num_edges() = 0;
+    virtual bool is_neighbor(Node u, Node v) = 0;
+    virtual std::vector<Node> get_neighbors(Node u) = 0;
+    virtual std::map<int, Node> get_id_to_node_map() = 0;
 };
 
-class Graph : public AbstractGraph
-{
+class Graph : public AbstractGraph {
 private:
-	int num_nodes;
-	int num_egdes;
-	//vector<vector<bool>> adjMatrix;
-	map<int, Node> nodes;
+    int num_nodes;
+    int num_edges;
+    std::map<int, Node> nodes;
 
 public:
-	Graph();
+    Graph();
 
-	int get_num_nodes();
-	void set_num_nodes(int num_nodes);
+    int get_num_nodes() override;
+    void set_num_nodes(int count);
 
-	int get_num_edges();
-	void set_num_edges(int num_edges);
-	map<int, Node> get_id_to_node_map();
-	
-	//vector<vector<bool>> getMatrix();
+    int get_num_edges() override;
+    void set_num_edges(int count);
 
-	vector<pair<Node, Node>> get_Edges();
+    std::map<int, Node> get_id_to_node_map() override;
+    std::vector<std::pair<Node, Node>> get_edges();
 
-	//void setMatrix(vector<vector<bool>> adjMatrix);
+    bool is_neighbor(Node u, Node v) override;
+    std::vector<Node> get_neighbors(Node u) override;
+    void add_neighbor(Node u, Node v);
 
-	bool is_neighbor(Node u, Node v);
-	vector<Node> get_neighbors(Node u);
-	void add_neigbor(Node u, Node v);
-	map<Node, int> get_All_Degrees();
-	int get_Distance(Node u, Node v);
+    std::map<Node, int> get_all_degrees();
+    int get_distance(Node u, Node v);
+    std::vector<Node> get_bfs(Node start);
+    std::pair<int, Node> bfs_for_diameter(Node start);
 
-	vector<Node> getBFS(Node n);
-	pair<int, Node> BFS_for_Diameter(Node n);
-
-	int getNum_2PEdge();
-	pair < list<Node>, map < Node, vector<Node>> > get_Degeneracy();
-	int get_Triangles();
-
-
-	~Graph();
+    long long get_num_two_paths();
+    std::pair<std::list<Node>, std::map<Node, std::vector<Node>>> get_degeneracy();
+    long long get_triangles();
 };
+
 #endif
