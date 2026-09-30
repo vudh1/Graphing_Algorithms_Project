@@ -1,52 +1,31 @@
-#include <vector>
-#include <iostream>
-
-using namespace std;
-
 #ifndef NODE_H_INCLUDED
 #define NODE_H_INCLUDED
-/*
-Node must
-	have a default constructor
-	have a public member int 'id' which uniquely identifies a node (no two nodes have the same id).
-		   id must be set in the constructor and thereafter not modified
-	have the following method:
-		bool operator==(const Node& other) const {return id == other.id;}
 
-You may add whatever other members you like to Node
-*/
+#include <iostream>
+#include <vector>
 
-class Node  
-{
+class Node {
 public:
-	int id;
-	vector<Node> neighbors;
+    int id;
+    std::vector<Node> neighbors;
 
-	Node() 
-	{ 
-	}
+    Node() : id(-1) {}
+    explicit Node(int node_id) : id(node_id) {}
 
-	Node(int i) {  id = i;  }
-	
-	void addneigbor(Node n) { neighbors.push_back(n); }
-	int getDegree() { return neighbors.size(); }
+    void add_neighbor(const Node& node) { neighbors.push_back(node); }
+    int getDegree() const { return static_cast<int>(neighbors.size()); }
 
-	bool operator==(const Node& other) const { return this->id == other.id; }
-	bool operator!=(const Node& other) const { return this->id != other.id; }
-	bool operator>(const Node& other) const { return this->id > other.id; }
-	bool operator>=(const Node& other) const { return this->id >= other.id; }
-	bool operator<(const Node& other) const { return this->id < other.id; }
-	bool operator<=(const Node& other) const { return this->id <= other.id; }
+    bool operator==(const Node& other) const { return id == other.id; }
+    bool operator!=(const Node& other) const { return id != other.id; }
+    bool operator>(const Node& other) const { return id > other.id; }
+    bool operator>=(const Node& other) const { return id >= other.id; }
+    bool operator<(const Node& other) const { return id < other.id; }
+    bool operator<=(const Node& other) const { return id <= other.id; }
 
-	friend ostream& operator<<(ostream& os, const Node& other)
-	{
-		os << other.id;	
-		return os;
-	}
-
-	~Node() 
-	{
-	};
+    friend std::ostream& operator<<(std::ostream& os, const Node& node) {
+        os << node.id;
+        return os;
+    }
 };
 
 #endif
