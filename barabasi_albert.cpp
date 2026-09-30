@@ -1,71 +1,57 @@
 #include "project3.h"
 
-int randomInt(int lb, int ub)
-{
-	mt19937 mt = mt19937(chrono::system_clock::now().time_since_epoch().count());
+#include <algorithm>
+#include <unordered_set>
 
-	uniform_int_distribution<int> ui = uniform_int_distribution<int>(lb, ub);
-
-	int r = ui(mt);
-
-	return r;
+namespace {
+std::mt19937_64& generator() {
+    static std::mt19937_64 value(std::random_device{}());
+    return value;
+}
 }
 
-Graph create_barabasi_albert_graph(int n, int d)
-{
-	if (n < 0) n = 0;
+Graph create_barabasi_albert_graph(int n, int d) {
+    if (n <= 0) {
+        return make_graph(0, {}, {});
+    }
+    if (n == 1) {
+        return make_graph(1, {}, {});
+    }
 
-	int size = 0;
+    d = std::max(1, std::min(d, n - 1));
+    const int seed_size = std::min(n, d + 1);
 
-	vector<int> vert1;
-	vector<int> vert2;
-	
-	map<int, set<int>> mvert;
+    std::vector<int> first;
+    std::vector<int> second;
+    std::vector<int> repeated_nodes;
 
-	vector<int> vectorN,vectorD;
+    // Start with a complete seed graph so every seed vertex has non-zero degree.
+    for (int u = 0; u < seed_size; ++u) {
+        for (int v = u + 1; v < seed_size; ++v) {
+            first.push_back(u);
+            second.push_back(v);
+            repeated_nodes.push_back(u);
+            repeated_nodes.push_back(v);
+        }
+    }
 
-	map<int, bool> createdNodes;
-	for (int i = 0; i < 2 * n*d; i++)
-		createdNodes[i] = false;
+    for (int v = seed_size; v < n; ++v) {
+        std::unordered_set<int> targets;
+        std::uniform_int_distribution<std::size_t> distribution(0, repeated_nodes.size() - 1);
 
-	vector<int> M(2 * n*d, 0);
+        while (static_cast<int>(targets.size()) < d) {
+            targets.insert(repeated_nodes[distribution(generator())]);
+        }
 
-	for (int i = 0; i < n; i++)
-		vectorN.push_back(i);
+        for (int target : targets) {
+            first.push_back(v);
+            second.push_back(target);
 
-	for (int i = 0; i < d; i++)
-		vectorD.push_back(i);
+            // Each endpoint gains one degree, so append both to the sampling pool.
+            repeated_nodes.push_back(v);
+            repeated_nodes.push_back(target);
+        }
+    }
 
-	int r;
-
-	for (int v = 0; v < n; v++) {
-		for (int i = 0; i < d; i++)
-		{
-			M[2 * (v*d + i)] = v;
-			r = randomInt(0, 2 * (v*d + i));
-			M[2 * (v*d + i) + 1] = M[r];
-		}
-	}
-
-	for (int i = 0; i < n*d; i++)
-	{
-		createdNodes[M[2 * i]] = true;
-		createdNodes[M[2 * i + 1]] = true;
-
-		mvert[M[2 * i]].insert(M[2 * i + 1]);
-		//vert1.push_back(M[2 * i]);
-		//vert2.push_back(M[2 * i+1]);
-	}
-
-	for (auto &x : mvert)
-	{
-		for (auto &y : x.second)
-		{
-			vert1.push_back(x.first);
-			vert2.push_back(y);
-		}
-	}
-	
-
-	return make_graph(n, vert1, vert2);
+    return make_graph(n, first, second);
 }
