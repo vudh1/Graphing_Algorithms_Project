@@ -1,57 +1,62 @@
 #include "project3.h"
 
-double randomDouble(double lb, double ub)
-{
-	mt19937 mt = mt19937(chrono::system_clock::now().time_since_epoch().count());
+#include <algorithm>
+#include <limits>
 
-	uniform_real_distribution<double> ui = uniform_real_distribution<double>(lb, ub);
-
-	double r = ui(mt);
-
-	if (r == ub)
-		r = ui(mt);
-
-	return r;
+namespace {
+std::mt19937_64& generator() {
+    static std::mt19937_64 value(std::random_device{}());
+    return value;
+}
 }
 
-Graph create_erdos_renyi_graph(int n, float p)
-{
-	if (p >= float(1.00)) p = randomDouble(double(0.00), double(0.99));
+Graph create_erdos_renyi_graph(int n, double p) {
+    if (n <= 0) {
+        return make_graph(0, {}, {});
+    }
 
-	if (n <= 1) return make_graph(n, { 0 }, { 0 });
-	int v = 1, w = -1;
-	double r=0;
+    p = std::clamp(p, 0.0, 1.0);
+    if (p == 0.0 || n == 1) {
+        return make_graph(n, {}, {});
+    }
 
-	vector<int> vert1; 
-	vector<int> vert2;
+    std::vector<int> first;
+    std::vector<int> second;
 
-	int size = 0;
+    if (p == 1.0) {
+        for (int u = 0; u < n; ++u) {
+            for (int v = u + 1; v < n; ++v) {
+                first.push_back(u);
+                second.push_back(v);
+            }
+        }
+        return make_graph(n, first, second);
+    }
 
-	map<int, bool> createdNodes;
-	for (int i = 0; i < n; i++)
-		createdNodes[i] = false;
+    std::uniform_real_distribution<double> uniform(
+        std::nextafter(0.0, 1.0),
+        std::nextafter(1.0, 0.0)
+    );
 
-	while (v < n)
-	{
-		r = randomDouble(0, 1);
+    // Batagelj-Brandes edge-skipping generator for G(n, p).
+    int v = 1;
+    int w = -1;
+    const double log_one_minus_p = std::log1p(-p);
 
-		w += 1 + (int)(floor(log10(1 - r) / log10(1 - p)));
+    while (v < n) {
+        const double r = uniform(generator());
+        w += 1 + static_cast<int>(std::floor(std::log1p(-r) / log_one_minus_p));
 
-		while (w >= v && v < n)
-		{
-			w -= v;
-			v++;
-		}
+        while (w >= v && v < n) {
+            w -= v;
+            ++v;
+        }
 
-		if (v < n)
-		{
-			createdNodes[v] = true;
-			createdNodes[w] = true;
+        if (v < n) {
+            first.push_back(v);
+            second.push_back(w);
+        }
+    }
 
-			vert1.push_back(v);
-			vert2.push_back(w);
-		}
-	}
-
-	return make_graph(n,vert1,vert2);
+    return make_graph(n, first, second);
 }
