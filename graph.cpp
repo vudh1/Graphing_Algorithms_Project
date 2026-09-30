@@ -1,305 +1,276 @@
 #include "graph.h"
 
-Graph make_graph(int num_nodes, std::vector<int> u, std::vector<int> v)
-{
-	Graph graph;
+#include <algorithm>
+#include <queue>
+#include <stdexcept>
 
-	graph.set_num_nodes(num_nodes);
+Graph make_graph(int num_nodes, std::vector<int> u, std::vector<int> v) {
+    if (num_nodes < 0) {
+        throw std::invalid_argument("num_nodes must be non-negative");
+    }
+    if (u.size() != v.size()) {
+        throw std::invalid_argument("edge endpoint arrays must have equal length");
+    }
 
-	map<int, Node> nodes(graph.get_id_to_node_map());
+    Graph graph;
+    graph.set_num_nodes(num_nodes);
 
-	//vector<vector<bool>> adjMatrix(num_nodes, vector<bool>(num_nodes, false));
+    const auto nodes = graph.get_id_to_node_map();
+    std::set<std::pair<int, int>> unique_edges;
 
-	int num_edges = 0;
-	for (int i = 0; i < u.size(); i++)
-	{
-		if (u[i] != v[i] )
-		{
-			// undirected so do twice
-			//adjMatrix[u[i]][v[i]] = true;
-			//adjMatrix[v[i]][u[i]] = true;
+    for (std::size_t i = 0; i < u.size(); ++i) {
+        if (u[i] < 0 || v[i] < 0 || u[i] >= num_nodes || v[i] >= num_nodes || u[i] == v[i]) {
+            continue;
+        }
 
-			num_edges++;
+        const int a = std::min(u[i], v[i]);
+        const int b = std::max(u[i], v[i]);
+        if (!unique_edges.insert({a, b}).second) {
+            continue;
+        }
 
-			graph.add_neigbor(nodes[u[i]], nodes[v[i]]);
-			graph.add_neigbor(nodes[v[i]], nodes[u[i]]);
-		}
-	}
+        graph.add_neighbor(nodes.at(a), nodes.at(b));
+        graph.add_neighbor(nodes.at(b), nodes.at(a));
+    }
 
-	//graph.setMatrix(adjMatrix);
-	graph.set_num_edges(num_edges);
-
-	return graph;
+    graph.set_num_edges(static_cast<int>(unique_edges.size()));
+    return graph;
 }
 
-Graph::Graph()
-{
-	num_nodes = 0;
-	num_egdes = 0;
+Graph::Graph() : num_nodes(0), num_edges(0) {}
+
+int Graph::get_num_nodes() {
+    return num_nodes;
 }
 
-
-int Graph::get_num_nodes()
-{
-	return num_nodes;
+void Graph::set_num_nodes(int count) {
+    num_nodes = count;
+    nodes.clear();
+    for (int i = 0; i < count; ++i) {
+        nodes.emplace(i, Node(i));
+    }
 }
 
-void Graph::set_num_nodes(int n)
-{
-	num_nodes = n;
-
-	for (int i = 0; i < n; i++)
-	{
-		nodes[i] = Node(i);
-	}
+int Graph::get_num_edges() {
+    return num_edges;
 }
 
-int Graph::get_num_edges()
-{
-	return num_egdes;
+void Graph::set_num_edges(int count) {
+    num_edges = count;
 }
 
-void Graph::set_num_edges(int n)
-{
-	num_egdes = n;
+std::map<int, Node> Graph::get_id_to_node_map() {
+    return nodes;
 }
 
-map<int, Node> Graph::get_id_to_node_map()
-{
-	return nodes;
+std::vector<std::pair<Node, Node>> Graph::get_edges() {
+    std::vector<std::pair<Node, Node>> edges;
+    for (const auto& [id, node] : nodes) {
+        for (const Node& neighbor : node.neighbors) {
+            if (id < neighbor.id) {
+                edges.push_back({node, nodes.at(neighbor.id)});
+            }
+        }
+    }
+    return edges;
 }
 
-//vector<vector<bool>> Graph::getMatrix()
-//{
-//	return adjMatrix;
-//}
-//
-//void Graph::setMatrix(vector<vector<bool>> matrix)
-//{
-//	adjMatrix = matrix;
-//}
+bool Graph::is_neighbor(Node u, Node v) {
+    const auto u_it = nodes.find(u.id);
+    const auto v_it = nodes.find(v.id);
+    if (u_it == nodes.end() || v_it == nodes.end()) {
+        return false;
+    }
 
-vector<pair<Node, Node>> Graph::get_Edges()
-{
-	vector<pair<Node, Node>> edges;
-	for (int i = 0; i < nodes.size() - 1; i++)
-	{
-		for (int j = 0; j < nodes[i].neighbors.size(); j++)
-		{
-			if (i < nodes[i].neighbors[j].id)
-				edges.push_back({ nodes[i],nodes[nodes[i].neighbors[j].id] });
-		}
-	}
-
-	return edges;
+    const auto& neighbors = u_it->second.neighbors;
+    return std::find(neighbors.begin(), neighbors.end(), v_it->second) != neighbors.end();
 }
 
-bool Graph::is_neighbor(Node u, Node v) //O(n)
-{
-	if (nodes[u.id].neighbors.size() == 0) return false;
-	if (nodes[v.id].neighbors.size() == 0) return false;
-
-	if (find(nodes[u.id].neighbors.begin(),nodes[u.id].neighbors.end(),nodes[v.id]) != nodes[u.id].neighbors.end())
-		return true;
-	return false;
+std::vector<Node> Graph::get_neighbors(Node u) {
+    const auto it = nodes.find(u.id);
+    if (it == nodes.end()) {
+        return {};
+    }
+    return it->second.neighbors;
 }
 
-vector<Node> Graph::get_neighbors(Node u)
-{
-	return nodes[u.id].neighbors;
+void Graph::add_neighbor(Node u, Node v) {
+    nodes.at(u.id).add_neighbor(v);
 }
 
-void Graph::add_neigbor(Node n, Node v)
-{
-	nodes[n.id].addneigbor(v);
+std::map<Node, int> Graph::get_all_degrees() {
+    std::map<Node, int> degrees;
+    for (const auto& [id, node] : nodes) {
+        (void)id;
+        degrees[node] = node.getDegree();
+    }
+    return degrees;
 }
 
-map<Node, int> Graph::get_All_Degrees()
-{
-	map<Node, int> degrees;
+int Graph::get_distance(Node u, Node v) {
+    if (nodes.find(u.id) == nodes.end() || nodes.find(v.id) == nodes.end()) {
+        return -1;
+    }
+    if (u.id == v.id) {
+        return 0;
+    }
 
-	for (auto &x : nodes)
-		degrees[x.second] = x.second.getDegree();
+    std::vector<int> distance(nodes.size(), -1);
+    std::queue<int> queue;
+    distance[u.id] = 0;
+    queue.push(u.id);
 
-	return degrees;
+    while (!queue.empty()) {
+        const int current = queue.front();
+        queue.pop();
+
+        for (const Node& neighbor : nodes.at(current).neighbors) {
+            if (distance[neighbor.id] != -1) {
+                continue;
+            }
+
+            distance[neighbor.id] = distance[current] + 1;
+            if (neighbor.id == v.id) {
+                return distance[neighbor.id];
+            }
+            queue.push(neighbor.id);
+        }
+    }
+
+    return -1;
 }
 
+std::vector<Node> Graph::get_bfs(Node start) {
+    std::vector<Node> order;
+    if (nodes.find(start.id) == nodes.end()) {
+        return order;
+    }
 
-int Graph::get_Distance(Node u, Node v) // O(n^2)
-{
-	if (is_neighbor(u,v)) return 1;
+    std::vector<bool> visited(nodes.size(), false);
+    std::queue<int> queue;
+    visited[start.id] = true;
+    queue.push(start.id);
 
-	vector<int> distance(nodes.size(), 0);
+    while (!queue.empty()) {
+        const int current = queue.front();
+        queue.pop();
+        order.push_back(nodes.at(current));
 
-	vector<bool> visited(nodes.size(), false);
+        for (const Node& neighbor : nodes.at(current).neighbors) {
+            if (!visited[neighbor.id]) {
+                visited[neighbor.id] = true;
+                queue.push(neighbor.id);
+            }
+        }
+    }
 
-	list<Node> queue;
-
-	Node n;
-
-	queue.push_back(u);
-
-	visited[u.id] = true;
-
-	while (!queue.empty())
-	{
-		n = queue.front();
-		queue.pop_front();
-
-		for (auto &x : nodes[n.id].neighbors)
-		{
-			if (visited[x.id]) continue;
-
-			distance[x.id] = distance[n.id] + 1;
-			queue.push_back(x);
-			visited[x.id] = true;
-		}
-	}
-
-	return distance[v.id];
+    return order;
 }
 
-vector<Node> Graph::getBFS(Node n) //O(n^2)
-{
-	vector<Node> bfs;
+std::pair<int, Node> Graph::bfs_for_diameter(Node start) {
+    if (nodes.find(start.id) == nodes.end()) {
+        return {-1, Node()};
+    }
 
-	vector<bool> visited(nodes.size(), false);
+    std::vector<int> distance(nodes.size(), -1);
+    std::queue<int> queue;
+    distance[start.id] = 0;
+    queue.push(start.id);
 
-	list<Node> queue;
+    int max_distance = 0;
+    Node farthest = nodes.at(start.id);
 
-	visited[n.id] = true;
+    while (!queue.empty()) {
+        const int current = queue.front();
+        queue.pop();
 
-	queue.push_back(n);
+        for (const Node& neighbor : nodes.at(current).neighbors) {
+            if (distance[neighbor.id] != -1) {
+                continue;
+            }
 
-	while (!queue.empty())
-	{
-		n = queue.front();
-		bfs.push_back(n);
-		queue.pop_front();
+            distance[neighbor.id] = distance[current] + 1;
+            queue.push(neighbor.id);
 
-		for (auto &x : nodes[n.id].neighbors)
-		{
-			if (!visited[x.id])
-			{
-				visited[x.id] = true;
-				queue.push_back(x);
-			}
+            if (distance[neighbor.id] > max_distance) {
+                max_distance = distance[neighbor.id];
+                farthest = nodes.at(neighbor.id);
+            }
+        }
+    }
 
-		}
-	}
-
-	return bfs;
+    return {max_distance, farthest};
 }
 
-
-pair<int, Node> Graph::BFS_for_Diameter(Node n) //O(n^2)
-{
-	int max_distance = 0;
-	Node maxnode = n;
-
-	vector<Node> bfs = getBFS(n);
-
-	int distance = get_Distance(n, bfs[bfs.size() - 1]);
-
-	return { distance,bfs[bfs.size() - 1] };
+long long Graph::get_num_two_paths() {
+    long long count = 0;
+    for (const auto& [id, node] : nodes) {
+        (void)id;
+        const long long degree = node.getDegree();
+        count += degree * (degree - 1) / 2;
+    }
+    return count;
 }
 
-int Graph::getNum_2PEdge() //O(n)
-{
-	int num = 0;
+std::pair<std::list<Node>, std::map<Node, std::vector<Node>>> Graph::get_degeneracy() {
+    std::list<Node> ordering;
+    std::map<Node, std::vector<Node>> forward_neighbors;
 
-	for (auto &x : nodes)
-		num += x.second.getDegree()*(x.second.getDegree() - 1) / 2;
+    auto degrees = get_all_degrees();
+    std::set<Node> remaining;
+    for (const auto& [node, degree] : degrees) {
+        (void)degree;
+        remaining.insert(node);
+    }
 
-	return num;
+    while (!remaining.empty()) {
+        auto min_it = std::min_element(
+            remaining.begin(),
+            remaining.end(),
+            [&degrees](const Node& a, const Node& b) {
+                if (degrees[a] != degrees[b]) {
+                    return degrees[a] < degrees[b];
+                }
+                return a.id < b.id;
+            }
+        );
+
+        Node v = *min_it;
+        remaining.erase(min_it);
+        ordering.push_back(v);
+
+        for (const Node& neighbor : get_neighbors(v)) {
+            if (remaining.count(neighbor)) {
+                forward_neighbors[v].push_back(neighbor);
+                --degrees[neighbor];
+            }
+        }
+    }
+
+    return {ordering, forward_neighbors};
 }
 
-pair < list<Node>, map < Node, vector<Node>> > Graph::get_Degeneracy()
-{
+long long Graph::get_triangles() {
+    long long triangles = 0;
 
-	list<Node> outputList;
+    // Count each triangle exactly once using increasing node IDs: u < v < w.
+    for (const auto& [u_id, u] : nodes) {
+        for (const Node& v : u.neighbors) {
+            if (v.id <= u_id) {
+                continue;
+            }
 
-	map<Node, int> d = get_All_Degrees();
+            for (const Node& w : nodes.at(v.id).neighbors) {
+                if (w.id <= v.id) {
+                    continue;
+                }
 
-	map<Node, bool> ht_List;
+                if (is_neighbor(u, w)) {
+                    ++triangles;
+                }
+            }
+        }
+    }
 
-	map<int, set<Node>> arrayD;
-
-	for (auto &i : d)
-	{
-		arrayD[i.second].insert(i.first);
-		ht_List[i.first] = false;
-	}
-
-	map<Node, vector<Node>> N;
-
-	Node v;
-
-	for (auto &x : nodes)
-	{
-		map<int, set<Node>>::iterator i = arrayD.begin();
-
-		while (i->second.size() == 0 && i != arrayD.end())
-			i++;
-
-		if (i == arrayD.end()) break;
-
-		v = *(arrayD[i->first].begin());
-
-		outputList.push_front(v);
-		arrayD[i->first].erase(arrayD[i->first].begin());
-
-		if (!ht_List[v])
-			ht_List[v] = true;
-
-		vector<Node> neigbors_of_v = get_neighbors(v);
-
-		for (auto &w : neigbors_of_v)
-		{
-			if (!ht_List[w])
-			{
-				arrayD[d[w]].erase(arrayD[d[w]].find(w));
-
-				d[w]--;
-
-				arrayD[d[w]].insert(w);
-
-				N[v].push_back(w);
-			}
-		}
-	}
-
-	return { outputList,N };
-}
-
-int Graph::get_Triangles()
-{
-	pair<list<Node>, map<Node, vector<Node>>> degeneracy = get_Degeneracy();
-
-	list<Node> li(degeneracy.first);
-	map<Node, vector<Node>> n(degeneracy.second);
-
-	int triangle_Num = 0;
-	for (auto &v : li)
-	{
-		if (n[v].size() >= 2)
-		{
-			for (int i = 0; i < n[v].size() - 1; i++)
-			{
-				for (int j = 0; j < n[v].size(); j++)
-				{
-					if (is_neighbor(n[v][i], n[v][j]))
-						triangle_Num++;
-				}
-			}
-		}
-	}
-	return triangle_Num;
-}
-
-Graph:: ~Graph()
-{
-	num_nodes = 0;
-	num_egdes = 0;
-	nodes.clear();
+    return triangles;
 }
