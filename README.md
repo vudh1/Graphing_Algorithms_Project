@@ -8,6 +8,12 @@ It generates **Erdős–Rényi** and **Barabási–Albert** graphs, then measure
 - global clustering coefficient;
 - degree distribution.
 
+## Demo
+
+![Graphing Algorithms animated demo](demo.gif)
+
+*Animated view of the two network models and the metrics this project computes.*
+
 ## Build and run
 
 ```bash
