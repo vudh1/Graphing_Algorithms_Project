@@ -12,7 +12,7 @@ It generates **Erdős–Rényi** and **Barabási–Albert** graphs, then measure
 
 ![Graphing Algorithms animated demo](demo.gif)
 
-*Animated view of the two network models and the metrics this project computes.*
+*Terminal replay of an actual `./run.sh` build/run and the generated CSV files. Output is captured from the C++ executable, with pauses added for readability. This project is a CLI experiment; it does not have a graphical network UI.*
 
 ## Build and run
 
@@ -53,3 +53,12 @@ The tests use known small graphs to verify diameter, triangle counting, clusteri
 - Triangle counting counts each triangle exactly once using increasing node IDs.
 
 The original experimental report is preserved in `Graphing_report.pdf`.
+
+## Re-record the demo
+
+```bash
+pip install pillow
+python scripts/generate_demo.py
+```
+
+Requires Bash and a C++17 compiler, as does the application. The recorder builds/runs the actual project, reads its generated CSVs, and verifies graph sizes and degree/edge consistency before rendering the captured terminal text to GIF. It does not substitute NetworkX graphs or invented metrics. **Actions → Generate demo GIF** can refresh it manually.
